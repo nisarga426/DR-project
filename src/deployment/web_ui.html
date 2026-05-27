@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoDR — Diabetic Retinopathy Detection</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: #f0f4f8; min-height: 100vh; }
+  .hero { background: linear-gradient(135deg, #0f6e56, #185fa5);
+          color: white; padding: 2.5rem 2rem; text-align: center; }
+  .hero h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+  .hero p  { font-size: 15px; opacity: 0.9; max-width: 500px; margin: 0 auto; }
+  .container { max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+  .card { background: white; border-radius: 16px; padding: 2rem;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.08); margin-bottom: 1.5rem; }
+  .upload-area { border: 2.5px dashed #c0d0e0; border-radius: 12px;
+                 padding: 3rem 2rem; text-align: center; cursor: pointer;
+                 transition: all 0.2s; background: #f8fafc; }
+  .upload-area:hover { border-color: #185fa5; background: #f0f7ff; }
+  .upload-area.dragover { border-color: #0f6e56; background: #f0fff8; }
+  .upload-icon { font-size: 48px; margin-bottom: 12px; }
+  .upload-area h3 { font-size: 18px; color: #333; margin-bottom: 6px; }
+  .upload-area p  { font-size: 14px; color: #888; }
+  #fileInput { display: none; }
+  .btn { background: linear-gradient(135deg, #0f6e56, #185fa5);
+         color: white; border: none; padding: 12px 32px; border-radius: 10px;
+         font-size: 15px; font-weight: 600; cursor: pointer;
+         margin-top: 1rem; transition: opacity 0.2s; }
+  .btn:hover { opacity: 0.9; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .preview-section { display: none; text-align: center; margin-top: 1rem; }
+  #previewImg { max-width: 300px; max-height: 300px; border-radius: 12px;
+                border: 2px solid #e0e8f0; object-fit: cover; }
+  .result-card { display: none; }
+  .grade-badge { display: inline-block; padding: 8px 20px; border-radius: 50px;
+                 font-size: 16px; font-weight: 700; margin: 1rem 0; }
+  .action-box { border-radius: 12px; padding: 1.25rem 1.5rem; margin: 1rem 0;
+                display: flex; align-items: flex-start; gap: 12px; }
+  .action-icon { font-size: 28px; flex-shrink: 0; }
+  .action-text h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .action-text p  { font-size: 14px; line-height: 1.6; }
+  .prob-bar { margin: 6px 0; }
+  .prob-label { display: flex; justify-content: space-between;
+                font-size: 13px; margin-bottom: 3px; }
+  .prob-track { background: #f0f0f0; border-radius: 6px; height: 10px;
+                overflow: hidden; }
+  .prob-fill  { height: 100%; border-radius: 6px;
+                transition: width 0.8s ease; }
+  .confidence-ring { width: 120px; height: 120px; margin: 0 auto 1rem;
+                     position: relative; }
+  .confidence-ring svg { transform: rotate(-90deg); }
+  .confidence-text { position: absolute; top: 50%; left: 50%;
+                     transform: translate(-50%,-50%);
+                     font-size: 22px; font-weight: 700; color: #333; }
+  .loading { display: none; text-align: center; padding: 2rem; }
+  .spinner { width: 48px; height: 48px; border: 4px solid #e0e8f0;
+             border-top-color: #185fa5; border-radius: 50%;
+             animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .disclaimer { background: #fff8e1; border-left: 4px solid #f9a825;
+                border-radius: 0 10px 10px 0; padding: 12px 16px;
+                font-size: 13px; color: #856404; margin-top: 1rem; }
+  .stats-row { display: grid; grid-template-columns: repeat(3,1fr);
+               gap: 10px; margin-top: 1rem; }
+  .stat { background: #f8fafc; border-radius: 10px; padding: 12px;
+          text-align: center; }
+  .stat-num { font-size: 20px; font-weight: 700; color: #185fa5; }
+  .stat-label { font-size: 11px; color: #888; margin-top: 2px; }
+  .reset-btn { background: none; border: 1.5px solid #185fa5; color: #185fa5;
+               padding: 8px 20px; border-radius: 8px; cursor: pointer;
+               font-size: 14px; margin-top: 1rem; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>🔬 AutoDR</h1>
+  <p>AI-powered Diabetic Retinopathy Detection — Clinical grade screening in seconds</p>
+</div>
+
+<div class="container">
+
+  <!-- Stats bar -->
+  <div class="card">
+    <div class="stats-row">
+      <div class="stat">
+        <div class="stat-num">0.8832</div>
+        <div class="stat-label">QWK Score</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">91.0%</div>
+        <div class="stat-label">Sensitivity</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">0.9825</div>
+        <div class="stat-label">AUC-ROC</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload card -->
+  <div class="card" id="uploadCard">
+    <h2 style="margin-bottom:1rem;font-size:18px">Upload Retinal Image</h2>
+    <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+      <div class="upload-icon">👁️</div>
+      <h3>Drop retinal fundus image here</h3>
+      <p>or click to browse — JPG, PNG supported</p>
+      <input type="file" id="fileInput" accept="image/*">
+    </div>
+    <div class="preview-section" id="previewSection">
+      <img id="previewImg" alt="Preview">
+      <br>
+      <button class="btn" id="analyzeBtn" onclick="analyze()">
+        🔍 Analyze Image
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="card loading" id="loadingCard">
+    <div class="spinner"></div>
+    <p style="color:#888;font-size:15px">Analyzing retinal image...</p>
+  </div>
+
+  <!-- Result card -->
+  <div class="card result-card" id="resultCard">
+    <h2 style="margin-bottom:1rem;font-size:18px">Diagnosis Result</h2>
+
+    <div style="text-align:center">
+      <div class="confidence-ring">
+        <svg width="120" height="120" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="50" fill="none"
+                  stroke="#f0f0f0" stroke-width="10"/>
+          <circle cx="60" cy="60" r="50" fill="none"
+                  stroke="#185fa5" stroke-width="10"
+                  stroke-dasharray="314"
+                  stroke-dashoffset="314"
+                  id="confCircle" stroke-linecap="round"/>
+        </svg>
+        <div class="confidence-text" id="confText">0%</div>
+      </div>
+      <div style="font-size:13px;color:#888;margin-bottom:8px">Confidence</div>
+      <div class="grade-badge" id="gradeBadge">—</div>
+    </div>
+
+    <div class="action-box" id="actionBox">
+      <div class="action-icon" id="actionIcon">—</div>
+      <div class="action-text">
+        <h3 id="actionTitle">—</h3>
+        <p id="actionMsg">—</p>
+      </div>
+    </div>
+
+    <h3 style="font-size:14px;font-weight:600;margin:1rem 0 8px">
+      Grade Probabilities
+    </h3>
+    <div id="probBars"></div>
+
+    <div class="disclaimer">
+      ⚠️ This AI tool is for screening assistance only. Always consult
+      a qualified ophthalmologist for diagnosis and treatment decisions.
+    </div>
+
+    <div style="text-align:center">
+      <button class="reset-btn" onclick="reset()">← Analyze Another Image</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const GRADES = ['No DR','Mild NPDR','Moderate NPDR','Severe NPDR','Proliferative DR'];
+const ACTIONS = {
+  CLEAR:        { icon:'✅', color:'#e8f5e9', border:'#2e7d32', title:'All Clear' },
+  MONITOR:      { icon:'👁️', color:'#e3f2fd', border:'#1565c0', title:'Monitor' },
+  REFER:        { icon:'🏥', color:'#fff3e0', border:'#e65100', title:'Refer to Specialist' },
+  HUMAN_REVIEW: { icon:'👨‍⚕️', color:'#fce4ec', border:'#c62828', title:'Human Review Required' }
+};
+const COLORS = ['#4caf50','#2196f3','#ff9800','#f44336','#9c27b0'];
+
+let selectedFile = null;
+
+// Drag and drop
+const uploadArea = document.getElementById('uploadArea');
+uploadArea.addEventListener('dragover', e => {
+  e.preventDefault(); uploadArea.classList.add('dragover'); });
+uploadArea.addEventListener('dragleave', () =>
+  uploadArea.classList.remove('dragover'));
+uploadArea.addEventListener('drop', e => {
+  e.preventDefault(); uploadArea.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) handleFile(file);
+});
+
+document.getElementById('fileInput').addEventListener('change', e => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+
+function handleFile(file) {
+  selectedFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('previewImg').src = e.target.result;
+    document.getElementById('previewSection').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function analyze() {
+  if (!selectedFile) return;
+  document.getElementById('analyzeBtn').disabled = true;
+  document.getElementById('loadingCard').style.display = 'block';
+  document.getElementById('resultCard').style.display = 'none';
+
+  const reader = new FileReader();
+  reader.onload = async e => {
+    const b64 = e.target.result.split(',')[1];
+    try {
+      const resp = await fetch('http://localhost:8000/predict', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({image_b64: b64})
+      });
+      const result = await resp.json();
+      showResult(result);
+    } catch (err) {
+      alert('Error: Make sure the API server is running!\n' +
+            'Run: python3 src/deployment/api.py');
+      document.getElementById('loadingCard').style.display = 'none';
+      document.getElementById('analyzeBtn').disabled = false;
+    }
+  };
+  reader.readAsDataURL(selectedFile);
+}
+
+function showResult(r) {
+  document.getElementById('loadingCard').style.display = 'none';
+  document.getElementById('resultCard').style.display = 'block';
+
+  // Confidence ring
+  const pct = Math.round(r.confidence * 100);
+  const circumference = 314;
+  const offset = circumference - (circumference * r.confidence);
+  document.getElementById('confCircle').style.strokeDashoffset = offset;
+  document.getElementById('confText').textContent = pct + '%';
+
+  // Grade badge
+  const badge = document.getElementById('gradeBadge');
+  badge.textContent = `Grade ${r.grade} — ${r.grade_label}`;
+  badge.style.background = COLORS[r.grade] + '22';
+  badge.style.color = COLORS[r.grade];
+  badge.style.border = `2px solid ${COLORS[r.grade]}`;
+
+  // Action box
+  const action = ACTIONS[r.action] || ACTIONS.HUMAN_REVIEW;
+  const box = document.getElementById('actionBox');
+  box.style.background = action.color;
+  box.style.border = `1.5px solid ${action.border}`;
+  document.getElementById('actionIcon').textContent = action.icon;
+  document.getElementById('actionTitle').textContent = action.title;
+  document.getElementById('actionTitle').style.color = action.border;
+  document.getElementById('actionMsg').textContent = r.message;
+
+  // Probability bars
+  const barsDiv = document.getElementById('probBars');
+  barsDiv.innerHTML = '';
+  Object.entries(r.probabilities).forEach(([grade, prob], i) => {
+    const pct = Math.round(prob * 100);
+    barsDiv.innerHTML += `
+      <div class="prob-bar">
+        <div class="prob-label">
+          <span>${grade}</span><span>${pct}%</span>
+        </div>
+        <div class="prob-track">
+          <div class="prob-fill"
+               style="width:${pct}%;background:${COLORS[i]}">
+          </div>
+        </div>
+      </div>`;
+  });
+}
+
+function reset() {
+  selectedFile = null;
+  document.getElementById('previewSection').style.display = 'none';
+  document.getElementById('resultCard').style.display  = 'none';
+  document.getElementById('analyzeBtn').disabled = false;
+  document.getElementById('fileInput').value = '';
+  document.getElementById('previewImg').src = '';
+}
+</script>
+</body>
+</html>

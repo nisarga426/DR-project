@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+
+# Virtual environment
+venv/
+env/
+
+# Data & Models (large files)
+*.pth
+*.onnx
+*.onnx.data
+data/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+*.log
+wget-log
+
+# MLflow
+mlruns/
+
+# Miniconda
+Miniconda3*
