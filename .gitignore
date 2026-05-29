@@ -8,7 +8,6 @@ venv/
 env/
 
 # Data & Models (large files)
-*.pth
 *.onnx
 *.onnx.data
 data/
@@ -25,3 +24,10 @@ mlruns/
 
 # Miniconda
 Miniconda3*
+
+# Secret config files - NEVER push these
+supabase_config.py
+src/deployment/supabase_config.py
+.env
+*.env
+config_secrets.py
