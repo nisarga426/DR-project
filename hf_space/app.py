@@ -111,4 +111,3 @@ with st.sidebar:
     st.markdown("**QWK:** 0.8688")
     st.markdown("**Training:** Kaggle T4 GPU")
     st.divider()
-    st.caption("⚠️ Research only. Not a certified medical device.")
