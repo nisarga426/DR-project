@@ -31,3 +31,4 @@ src/deployment/supabase_config.py
 .env
 *.env
 config_secrets.py
+__pycache__/
